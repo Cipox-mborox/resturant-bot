@@ -2,8 +2,58 @@ import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackContext, CallbackQueryHandler, MessageHandler, Filters
+# Tambah di imports
 import json
 from datetime import datetime
+
+# Tambah constant
+ORDERS_FILE = 'orders.json'
+
+def load_orders():
+    """Load orders from JSON file"""
+    try:
+        with open(ORDERS_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_orders(orders):
+    """Save orders to JSON file"""
+    with open(ORDERS_FILE, 'w') as f:
+        json.dump(orders, f, indent=2)
+
+# Update fungsi create_order
+def create_order(user_id, session):
+    order_id = f"ORD{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    
+    orders = load_orders()
+    
+    orders[order_id] = {
+        'user_id': user_id,
+        'customer_name': session['customer_name'],
+        'phone': session['phone'],
+        'address': session['address'],
+        'items': session['cart'].copy(),
+        'total': sum(item['price'] for item in session['cart']),
+        'status': 'baru',  # Status awal
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    save_orders(orders)
+    return order_id
+
+# Update fungsi order_status untuk baca dari file
+def order_status(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    orders = load_orders()
+    
+    # Find user's orders
+    user_orders = []
+    for order_id, order in orders.items():
+        if order['user_id'] == user_id:
+            user_orders.append((order_id, order))
+    
+    # ... (sisanya sama)
 
 # Setup logging
 logging.basicConfig(
